@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.egg-info/
+.pytest_cache/
+runs/
+out/
+/build/
+/dist/
+# User-supplied assets and generated targets never belong in the repository.
+/targets/
+*.dat
+*.iso
+*.pac
+*.pcs
+*.vrm
+*.glb
+*.gltf
+*.blend
+*.blend1
+*.fbx
+*.obj
+*.dae
+*.zip

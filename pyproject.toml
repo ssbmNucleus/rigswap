@@ -1,0 +1,31 @@
+[project]
+name = "rigswap"
+version = "0.0.1"
+description = "Put a downloaded 3D model onto a target skeleton, so that skeleton's animations drive it."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bpy==5.2.2",
+    "numpy",
+    "pillow",
+    "requests",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-xdist>=3.8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["rigswap*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "fast: no bpy or real game files; measured below one second per test",
+    "blender: uses bpy in this process or a Blender subprocess",
+    "plugin: needs plugin assets or an external plugin tool",
+    "slow: measured above five seconds (setup, call and teardown combined)",
+]
