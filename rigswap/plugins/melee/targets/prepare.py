@@ -65,10 +65,7 @@ def prepare(files_dir=None, out_dir=None, names=None, refresh_memory=False):
                     raise Failed(f'{needed.name} is not in {files}')
             if not (glb.is_file() and cam.is_file()):
                 dae = out / 'vanilla' / f.name / f'{f.name}.dae'
-                if not dae.is_file():
-                    with tempfile.TemporaryDirectory() as tmp:
-                        export_dae(vanilla_copies(tmp, dat, files / f'Pl{f.code}.dat')[0], f.symbol, dae, drawn_by=f)
-                model = read_dae(dae)
+                model = _exported(dae, f, files)
                 if not model.triangles:
                     raise Failed(f'{dae.name} has no triangles')
                 dae_to_glb(dae, glb)
@@ -82,6 +79,25 @@ def prepare(files_dir=None, out_dir=None, names=None, refresh_memory=False):
         print(f'{f.name}: {report[f.name]}', flush=True)
     (out / 'prepare.json').write_text(json.dumps(report, indent=1), encoding='utf-8')
     return report
+
+
+def _exported(dae, f, files):
+    """The fighter's vanilla costume as HSDRawViewer exports it to ``dae`` (export_dae), read (read_dae). An export
+    kept from an earlier run is read as it is, and exported again when it cannot be read: HSDRawViewer before the HSDLib
+    fork's v2026.11.21 wrote a comma-decimal Windows's own number format into it (5,667229), and the file stayed for
+    every later import (0.9.0 reports, 2026-11-21). Failed when a fresh export cannot be read either."""
+    if dae.is_file():
+        try:
+            return read_dae(dae)
+        except (ValueError, ET.ParseError):
+            pass
+    with tempfile.TemporaryDirectory() as tmp:
+        export_dae(vanilla_copies(tmp, files / f'Pl{f.code}Nr.dat', files / f'Pl{f.code}.dat')[0], f.symbol, dae,
+                   drawn_by=f)
+    try:
+        return read_dae(dae)
+    except (ValueError, ET.ParseError) as e:
+        raise Failed(f'the {dae.name} HSDRawViewer exported cannot be read: {e}') from e
 
 
 def drawn_after_lighting(dae):

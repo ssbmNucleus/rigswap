@@ -66,6 +66,42 @@ def test_prepare_records_importer_failure(tmp_path, monkeypatch):
     assert not (tmp_path / 'Mario.memory.json').exists()
 
 
+def test_a_kept_export_that_cannot_be_read_is_exported_again(tmp_path, monkeypatch):
+    """0.9.0 on a German Windows: HSDRawViewer wrote 5,667229 into Luigi's vanilla .dae, read_dae could not read it,
+    and the kept file failed every import after it, the update that writes dots included. A kept export that cannot be
+    read is exported again, a readable one is read as it is, and a fresh export that cannot be read is Failed."""
+    import numpy as np
+    from rigswap.plugins.melee.facts.fighters import fighter
+    files = tmp_path / 'files'
+    files.mkdir()
+    for name in ('PlLgNr.dat', 'PlLg.dat'):
+        (files / name).touch()
+    dae = tmp_path / 'vanilla' / 'Luigi' / 'Luigi.dae'
+    dae.parent.mkdir(parents=True)
+    dae.write_text('0,60974103 5,667229', encoding='utf-8')
+    exported, writes = [], ['0.60974103 5.667229']
+
+    def export(dat, symbol, out, drawn_by=None):
+        exported.append((Path(dat).name, drawn_by.name))
+        out.write_text(writes[-1], encoding='utf-8')
+        return out
+
+    monkeypatch.setattr(targets_prepare, 'export_dae', export)
+    # read_dae reads every number list as melee_dae._floats does: split on spaces, each one a float
+    monkeypatch.setattr(targets_prepare, 'read_dae', lambda p: np.array(Path(p).read_text(encoding='utf-8').split(),
+                                                                        float).tolist())
+    luigi = fighter('Luigi')
+    assert targets_prepare._exported(dae, luigi, files) == [0.60974103, 5.667229]
+    assert exported == [('PlLgNr.dat', 'Luigi')]
+    assert targets_prepare._exported(dae, luigi, files) == [0.60974103, 5.667229]
+    assert len(exported) == 1
+    writes.append('0,60974103 5,667229')
+    dae.unlink()
+    with pytest.raises(Failed, match=r"the Luigi\.dae HSDRawViewer exported cannot be read: could not convert string "
+                                     r"to float: '0,60974103'"):
+        targets_prepare._exported(dae, luigi, files)
+
+
 @pytest.mark.blender
 @pytest.mark.skipif(_blender4_or_none() is None, reason='needs a Blender 4.x (rigswap.load.convert)')
 def test_a_target_glb_has_the_texture_hsdrawviewer_left_out_of_the_dae(tmp_path, monkeypatch):
